@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: qiqi-data-agent
+  datasource:
+    url: jdbc:h2:mem:qiqi;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+
+server:
+  port: 8080
+
+qiqi:
+  model:
+    api-key: ${DASHSCOPE_API_KEY:}
+    name: ${QIQI_MODEL:qwen-plus}
+    max-iterations: 12
+  query:
+    max-rows: 200
+    timeout: 10s
+  exposed-tables:
+    - department
+    - customer
+    - product
+    - sales_order
+    - sales_order_item

@@ -1,2 +1,138 @@
-# agentcoding
-agentcoding
+# Qiqi DataAgent
+
+Qiqi DataAgent 是一个基于 AgentScope Java 的数据分析智能体。用户用自然语言提问，Agent 会查看真实表结构、生成并校验只读 SQL、按服务端身份施加数据范围、执行查询，再输出带 `queryId` 证据的分析结果。
+
+这个仓库是独立项目，拥有自己的构建、示例数据、测试和 Git 历史。代码、提示词、页面和销售示例数据均为本项目重新设计，没有复制课程项目的源码或静态资源。
+
+## 当前可运行能力
+
+- AgentScope Java 2.0.3 ReAct 循环与 DashScope 流式模型。
+- 表清单和真实 JDBC 元数据探查工具。
+- 单条只读 SQL 校验、表白名单、危险函数拦截和强制 `LIMIT`。
+- 服务端身份绑定；模型不能通过工具参数指定或伪造用户身份。
+- `ALL` 和 `DEPARTMENT` 两种数据范围；订单行必须通过订单主表的合法关联接受部门约束。
+- JDBC 查询超时、最大行数和只读连接标记。
+- 查询审计：记录 `queryId`、用户、会话、最终 SQL、耗时和执行状态。
+- SSE 流式接口和一个无前端构建依赖的聊天页面。
+- 原创 H2 销售数据，开箱即可验证 SQL、安全策略和部门隔离。
+
+当前身份入口 `X-Qiqi-User` 是本地演示适配器，用来验证 Agent 运行时身份传播，不是生产登录方案。公开部署前必须替换成 SSO、JWT 或企业网关认证，并为业务库配置数据库级只读账号。
+
+## 架构
+
+```mermaid
+flowchart LR
+    UI[Web / API] --> ID[Identity boundary]
+    ID --> AS[AgentScope ReActAgent]
+    AS --> C[Schema tools]
+    AS --> V[SQL validator]
+    AS --> Q[Scoped query tool]
+    Q --> P[Allowlist + data scope]
+    P --> DB[(Read-only database)]
+    Q --> A[(Query audit)]
+    AS --> UI
+```
+
+`ReActAgent` 按请求创建，避免共享可变运行状态；会话状态存储由应用共享，并以服务端确认的 `userId + sessionId` 隔离。同步 JDBC 工具在 Reactor 的弹性线程池执行，不阻塞 WebFlux 事件线程。
+
+## 本地运行
+
+要求：JDK 21、Maven 3.9+、一个 DashScope API Key。
+
+```bash
+export DASHSCOPE_API_KEY="your-key"
+mvn spring-boot:run
+```
+
+访问 [http://localhost:8080](http://localhost:8080)。可以切换三个演示身份：
+
+| 用户 | 数据范围 | 用途 |
+| --- | --- | --- |
+| `admin` | 全部数据 | 查看完整结果 |
+| `alice` | North Sales（部门 10） | 验证北区过滤 |
+| `bob` | South Sales（部门 20） | 验证南区过滤 |
+
+建议问题：
+
+```text
+对比 2026 年 1 月和 2 月已付款收入，并按部门解释变化，给出查询证据。
+```
+
+没有 API Key 时应用仍可启动，页面、数据和自动化测试可用；聊天接口会返回清楚的配置错误。
+
+## API
+
+流式聊天：
+
+```bash
+curl -N http://localhost:8080/api/chat/stream \
+  -H 'Content-Type: application/json' \
+  -H 'X-Qiqi-User: alice' \
+  -d '{"query":"统计每月已付款收入","conversationId":"demo-1"}'
+```
+
+运行信息与演示用户：
+
+```bash
+curl http://localhost:8080/api/meta
+```
+
+## 验证
+
+```bash
+mvn test
+```
+
+测试覆盖以下边界：
+
+- DML、多语句、注释、锁、未公开表和危险函数拒绝。
+- 直接、嵌套和 CTE 查询的部门条件注入。
+- 订单明细绕过、笛卡尔关联和带 `OR` 的放宽关联拒绝。
+- 同一聚合在管理员、北区、南区身份下返回不同且确定的结果。
+- 未知身份在 Agent 运行前拒绝。
+- 未配置模型密钥时应用仍能启动和提供静态页面。
+
+## 配置
+
+主要配置在 `src/main/resources/application.yml`：
+
+| 配置 | 默认值 | 说明 |
+| --- | --- | --- |
+| `DASHSCOPE_API_KEY` | 空 | DashScope 模型密钥 |
+| `QIQI_MODEL` | `qwen-plus` | 模型名 |
+| `qiqi.model.max-iterations` | `12` | 单次 ReAct 最大迭代 |
+| `qiqi.query.max-rows` | `200` | 查询结果硬上限 |
+| `qiqi.query.timeout` | `10s` | JDBC 查询超时 |
+| `qiqi.exposed-tables` | 五张示例业务表 | Agent 可见表白名单 |
+
+接真实数据库时，覆盖 `spring.datasource.*`，关闭示例初始化，并维护表白名单：
+
+```yaml
+spring:
+  sql:
+    init:
+      mode: never
+  datasource:
+    url: jdbc:mysql://localhost:3306/your_database
+    username: qiqi_readonly
+    password: ${QIQI_DB_PASSWORD}
+```
+
+当前部门范围规则针对示例订单模型：事实表是 `sales_order`，明细表是 `sales_order_item`。接入其他业务模型前，应为新事实表实现明确的范围规则和绕过测试，不能仅把表名加入白名单。
+
+## 后续路线
+
+第一阶段已经建立独立、可运行的安全查数闭环。下一步按以下顺序扩展，同时保持每项都有行为验证：
+
+1. 持久化会话、中断与恢复、稳定的前端事件协议。
+2. 业务术语和指标层，避免同一指标出现多种 SQL 口径。
+3. 文件上传、小文件直读、大文件 RAG 与图片理解。
+4. MCP 联网和图表、Skills 管理。
+5. 正式认证、角色和部门管理、PostgreSQL/MySQL 数据范围适配。
+6. 可观测性和参赛演示报告。
+
+Agent 自动评分和 BIRD 数据集评测暂不在当前范围；安全与功能回归测试会持续保留。
+
+## 公开发布
+
+仓库使用 [Apache License 2.0](LICENSE)。提交 GitHub 前请确认历史中没有 API Key、真实数据库地址、公司数据或课程受限资源。项目依赖 [AgentScope Java](https://github.com/agentscope-ai/agentscope-java)、Spring Boot、JSqlParser、H2 等第三方开源组件，各自遵循其许可证。

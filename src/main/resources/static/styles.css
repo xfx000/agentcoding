@@ -1,0 +1,22 @@
+:root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #eef2f0; color: #17332b; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top right, #d9f7e7, transparent 34rem), #eef2f0; }
+.shell { width: min(980px, calc(100% - 32px)); margin: 40px auto; }
+header { display: flex; justify-content: space-between; gap: 28px; align-items: end; margin-bottom: 24px; }
+h1 { font-size: clamp(2.2rem, 7vw, 4.4rem); line-height: .95; margin: 6px 0 12px; letter-spacing: -.05em; }
+.eyebrow { margin: 0; letter-spacing: .16em; font-size: .72rem; color: #18734f; font-weight: 800; }
+.sub { margin: 0; color: #536d64; }
+label { font-size: .8rem; color: #536d64; display: grid; gap: 6px; min-width: 220px; }
+select, textarea { width: 100%; border: 1px solid #bfd0c8; background: rgba(255,255,255,.85); color: inherit; border-radius: 12px; padding: 12px; font: inherit; }
+.notice { background: #fff2c9; border: 1px solid #efcf68; padding: 12px 16px; border-radius: 12px; margin-bottom: 18px; }
+.messages { display: grid; gap: 14px; min-height: 320px; }
+.message { max-width: 86%; padding: 16px 18px; border-radius: 18px; box-shadow: 0 8px 30px rgba(24,58,47,.07); }
+.message.user { justify-self: end; background: #17332b; color: white; }
+.message.assistant { background: rgba(255,255,255,.9); }
+.message pre { margin: 8px 0 0; white-space: pre-wrap; word-wrap: break-word; font: inherit; line-height: 1.65; }
+form { margin-top: 20px; padding: 16px; background: rgba(255,255,255,.9); border: 1px solid #d4dfda; border-radius: 18px; position: sticky; bottom: 16px; box-shadow: 0 18px 50px rgba(24,58,47,.12); }
+textarea { border: 0; resize: vertical; outline: none; background: transparent; padding: 4px; }
+.actions { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; color: #6a7e77; font-size: .85rem; }
+button { border: 0; border-radius: 999px; padding: 11px 20px; background: #20a36c; color: white; font-weight: 750; cursor: pointer; }
+button:hover { background: #16875a; }
+@media (max-width: 680px) { header { align-items: stretch; flex-direction: column; } .message { max-width: 96%; } }

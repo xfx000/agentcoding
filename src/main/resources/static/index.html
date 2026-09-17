@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Qiqi DataAgent</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">EVIDENCE-FIRST DATA AGENT</p>
+        <h1>Qiqi DataAgent</h1>
+        <p class="sub">用自然语言查询数据，并保留可核验的 SQL 证据。</p>
+      </div>
+      <label>演示身份
+        <select id="user"></select>
+      </label>
+    </header>
+
+    <section id="notice" class="notice"></section>
+    <section id="messages" class="messages" aria-live="polite"></section>
+
+    <form id="composer">
+      <textarea id="query" rows="3" placeholder="例如：对比 2026 年 1 月和 2 月已付款收入，并按部门解释变化" required></textarea>
+      <div class="actions">
+        <span id="status">就绪</span>
+        <button type="submit">开始分析</button>
+      </div>
+    </form>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
