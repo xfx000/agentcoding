@@ -35,10 +35,15 @@ public class ChatController {
     public Flux<ServerSentEvent<StreamEvent>> stream(
             @RequestHeader("X-Qiqi-User") String username,
             @Valid @RequestBody ChatRequest request) {
+        // 先在服务端确认身份，再进入 Agent。当前请求头只是演示入口，生产环境应替换成 SSO/JWT。
         UserIdentity identity = identities.findActiveByUsername(username)
                 .orElseThrow(() -> new SecurityException("Unknown or inactive demo user"));
+
+        // conversationId 对应 AgentScope 的 sessionId；未提供时创建新会话，提供时继续旧会话。
         String conversationId = request.conversationId() == null || request.conversationId().isBlank()
                 ? "qiqi-" + UUID.randomUUID() : request.conversationId().trim();
+
+        // AgentScope 输出领域事件，AgentEventMapper 将其转换成稳定的前端 SSE 协议。
         return agent.stream(request.query().trim(), conversationId, identity)
                 .map(eventMapper::map)
                 .onErrorResume(error -> Flux.just(StreamEvent.error(safeMessage(error))))

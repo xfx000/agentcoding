@@ -35,6 +35,12 @@ flowchart LR
 
 `ReActAgent` 按请求创建，避免共享可变运行状态；会话状态存储由应用共享，并以服务端确认的 `userId + sessionId` 隔离。同步 JDBC 工具在 Reactor 的弹性线程池执行，不阻塞 WebFlux 事件线程。
 
+## 跟着项目学习 AgentScope 2.0
+
+学习时先不要通读整个框架。第一课从一条真实请求入手，只看 Agent 的创建、`RuntimeContext` 和工具交接：
+
+- [第一课：一次请求怎样进入 AgentScope](docs/learning/01-agent-runtime-entry.md)
+
 ## 本地运行
 
 要求：JDK 21、Maven 3.9+、一个 DashScope API Key。
