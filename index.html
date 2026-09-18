@@ -140,60 +140,198 @@
       aria-labelledby="settings-heading"
       hidden
     >
-      <header class="settings-header">
-        <div>
-          <span class="settings-eyebrow">PREFERENCES</span>
-          <h1 id="settings-heading">设置</h1>
+      <aside class="settings-nav">
+        <button id="close-settings" class="settings-return">
+          <span aria-hidden="true">←</span> 返回应用
+        </button>
+        <div class="settings-nav-title">设置</div>
+        <nav aria-label="设置分类">
+          <button
+            class="settings-tab active"
+            data-settings-tab="appearance"
+            aria-current="page"
+          >
+            <span aria-hidden="true">◐</span> 外观
+          </button>
+          <button class="settings-tab" data-settings-tab="model">
+            <span aria-hidden="true">✧</span> AI 模型与 Key
+          </button>
+          <button class="settings-tab" data-settings-tab="database">
+            <span aria-hidden="true">▤</span> 数据库
+          </button>
+        </nav>
+        <p class="settings-nav-caption">Qiqi · 你的数据工作台</p>
+      </aside>
+      <div class="settings-main">
+        <header class="settings-header">
+          <h1 id="settings-heading" tabindex="-1">外观</h1>
+          <p id="settings-subtitle">让工作台更合你的习惯。</p>
+        </header>
+        <div class="settings-content">
+          <div data-settings-panel="appearance">
+            <section class="settings-card">
+              <h2>外观</h2>
+              <p>为你的工作台选择一种色彩。</p>
+              <fieldset class="theme-options">
+                <legend class="sr-only">界面主题</legend>
+                <label class="theme-option"
+                  ><input
+                    type="radio"
+                    name="theme"
+                    value="white"
+                    checked
+                  /><span class="theme-preview preview-white"
+                    ><i></i><b></b><em></em></span
+                  ><strong>纯净白</strong
+                  ><span>留白与石墨，专注内容</span></label
+                >
+                <label class="theme-option"
+                  ><input type="radio" name="theme" value="sage" /><span
+                    class="theme-preview preview-sage"
+                    ><i></i><b></b><em></em></span
+                  ><strong>雾青绿</strong
+                  ><span>柔和青绿，清爽而安静</span></label
+                >
+              </fieldset>
+            </section>
+            <section class="settings-card">
+              <h2>输出体验</h2>
+              <div class="settings-row">
+                <div>
+                  <label for="typing-enabled">打字机效果</label>
+                  <p>让回答逐字展开，保持流畅的阅读节奏。</p>
+                </div>
+                <input
+                  id="typing-enabled"
+                  class="settings-switch"
+                  type="checkbox"
+                  role="switch"
+                  checked
+                />
+              </div>
+              <div class="settings-row">
+                <label for="typing-speed">呈现速度</label
+                ><select id="typing-speed">
+                  <option value="relaxed">舒缓</option>
+                  <option value="natural" selected>自然</option>
+                  <option value="fast">快速</option>
+                </select>
+              </div>
+            </section>
+            <p class="settings-footnote" id="settings-feedback" role="status">
+              设置自动保存在当前浏览器
+            </p>
+          </div>
+          <div data-settings-panel="model" hidden>
+            <div
+              class="settings-status"
+              id="model-load-status"
+              role="status"
+            ></div>
+            <form id="model-settings-form" class="settings-card config-form">
+              <h2>模型连接</h2>
+              <p>支持 DashScope 和 OpenAI 兼容接口。</p>
+              <fieldset id="model-fields" disabled>
+                <label for="model-provider">接口类型</label
+                ><select id="model-provider">
+                  <option value="openai">OpenAI 兼容</option>
+                  <option value="dashscope">DashScope</option>
+                </select>
+                <label for="model-base-url">API 地址</label
+                ><input
+                  id="model-base-url"
+                  type="url"
+                  placeholder="https://your-gateway.example/v1"
+                  maxlength="2048"
+                  autocomplete="off"
+                /><small
+                  >OpenAI 兼容接口必填；使用你获授权的模型服务地址。</small
+                >
+                <label for="model-name">模型名称</label
+                ><input
+                  id="model-name"
+                  required
+                  maxlength="160"
+                  placeholder="输入服务商提供的模型 ID"
+                  autocomplete="off"
+                />
+                <label for="model-key"
+                  >API Key
+                  <span id="model-key-state" class="setting-badge"
+                    >未配置</span
+                  ></label
+                ><input
+                  id="model-key"
+                  type="password"
+                  maxlength="4096"
+                  placeholder="留空保留已配置的 Key"
+                  autocomplete="new-password"
+                  spellcheck="false"
+                /><small>只写入服务端本地配置，不回显、不存入浏览器。</small>
+                <div class="config-footer">
+                  <span>保存后重启本地服务生效</span
+                  ><button type="submit" class="settings-save">
+                    保存模型配置
+                  </button>
+                </div>
+              </fieldset>
+            </form>
+          </div>
+          <div data-settings-panel="database" hidden>
+            <div
+              class="settings-status"
+              id="database-load-status"
+              role="status"
+            ></div>
+            <section class="settings-card">
+              <h2>当前数据源</h2>
+              <div class="settings-row">
+                <span>数据库</span><strong id="database-kind">读取中…</strong>
+              </div>
+              <div class="settings-row">
+                <span>连接位置</span><span id="database-location">—</span>
+              </div>
+              <p class="database-note">
+                默认使用本机 H2
+                内存库，重启后重新初始化示例数据。此页不会更换数据库连接。
+              </p>
+            </section>
+            <form id="database-settings-form" class="settings-card config-form">
+              <h2>查询限制</h2>
+              <p>限制单次查询规模，避免分析占用过多资源。</p>
+              <fieldset id="database-fields" disabled>
+                <label for="database-max-rows">最多返回行数</label
+                ><input
+                  id="database-max-rows"
+                  type="number"
+                  min="1"
+                  max="1000"
+                  required
+                /><label for="database-timeout">查询超时（秒）</label
+                ><input
+                  id="database-timeout"
+                  type="number"
+                  min="1"
+                  max="60"
+                  required
+                />
+                <div class="config-footer">
+                  <span>保存后重启本地服务生效</span
+                  ><button type="submit" class="settings-save">
+                    保存查询配置
+                  </button>
+                </div>
+              </fieldset>
+            </form>
+            <section class="settings-card database-roadmap">
+              <h2>外部数据库 <span class="setting-badge">待扩展</span></h2>
+              <p>
+                MySQL、PostgreSQL
+                等接入需分离业务库与系统库，并适配数据权限规则，当前暂不开放连接配置。
+              </p>
+            </section>
+          </div>
         </div>
-        <button id="close-settings" class="settings-back">返回分析 ↗</button>
-      </header>
-      <div class="settings-content">
-        <section class="settings-card">
-          <h2>外观</h2>
-          <p>为你的工作台选择一种色彩。</p>
-          <fieldset class="theme-options">
-            <legend class="sr-only">界面主题</legend>
-            <label class="theme-option"
-              ><input type="radio" name="theme" value="white" checked /><span
-                class="theme-preview preview-white"
-                ><i></i><b></b><em></em></span
-              ><strong>纯净白</strong><span>留白与石墨，专注内容</span></label
-            >
-            <label class="theme-option"
-              ><input type="radio" name="theme" value="sage" /><span
-                class="theme-preview preview-sage"
-                ><i></i><b></b><em></em></span
-              ><strong>雾青绿</strong><span>柔和青绿，清爽而安静</span></label
-            >
-          </fieldset>
-        </section>
-        <section class="settings-card">
-          <h2>输出体验</h2>
-          <div class="settings-row">
-            <div>
-              <label for="typing-enabled">打字机效果</label>
-              <p>让回答逐字展开，保持流畅的阅读节奏。</p>
-            </div>
-            <input
-              id="typing-enabled"
-              class="settings-switch"
-              type="checkbox"
-              role="switch"
-              checked
-            />
-          </div>
-          <div class="settings-row">
-            <label for="typing-speed">呈现速度</label
-            ><select id="typing-speed">
-              <option value="relaxed">舒缓</option>
-              <option value="natural" selected>自然</option>
-              <option value="fast">快速</option>
-            </select>
-          </div>
-        </section>
-        <p class="settings-footnote" id="settings-feedback" role="status">
-          设置自动保存在当前浏览器
-        </p>
       </div>
     </section>
     <dialog
