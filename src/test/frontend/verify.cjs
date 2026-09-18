@@ -111,7 +111,10 @@ function streamed(text) {
   );
   assert.equal(themeRestored.document.documentElement.dataset.theme, "sage");
   themeRestored.document.querySelector("#typing-enabled").click();
-  assert.equal(themeRestored.document.querySelector("#typing-speed").disabled, true);
+  assert.equal(
+    themeRestored.document.querySelector("#typing-speed").disabled,
+    true,
+  );
   await themeRestored.send("关闭打字效果");
   assert.equal(
     themeRestored.document.querySelector(".report").textContent.trim(),
@@ -120,6 +123,55 @@ function streamed(text) {
   themeRestored.close();
   console.log(
     "PASS theme persistence, settings navigation, progressive Unicode output, stop while draining and typing toggle",
+  );
+  const settingsData = {
+    restartRequired: false,
+    model: {
+      provider: "openai",
+      baseUrl: "https://example.com/v1",
+      name: "test-model",
+      keyConfigured: true,
+    },
+    database: {
+      kind: "H2 内存数据库",
+      location: "本机",
+      maxRows: "200",
+      timeoutSeconds: "10",
+    },
+  };
+  let savedSettings;
+  const configWindow = await setup((options) => {
+    if (options.method === "POST") savedSettings = JSON.parse(options.body);
+    return { ok: true, json: async () => settingsData };
+  });
+  const cd = configWindow.document;
+  cd.querySelector("#open-settings").click();
+  assert.equal(cd.querySelector(".sidebar").inert, true);
+  cd.querySelector('[data-settings-tab="model"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(
+    cd.querySelector("#settings-heading").textContent,
+    "AI 模型与 Key",
+  );
+  assert.equal(cd.querySelector("#model-name").value, "test-model");
+  assert.equal(cd.querySelector("#model-key").value, "");
+  cd.querySelector("#model-key").value = "fake-test-key";
+  cd.querySelector("#model-settings-form").dispatchEvent(
+    new configWindow.Event("submit", { cancelable: true }),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(savedSettings.apiKey, "fake-test-key");
+  assert.equal(cd.querySelector("#model-key").value, "");
+  assert.ok(
+    !JSON.stringify({ ...configWindow.localStorage }).includes("fake-test-key"),
+  );
+  cd.querySelector('[data-settings-tab="database"]').click();
+  assert.equal(cd.querySelector("#database-max-rows").value, "200");
+  cd.querySelector("#close-settings").click();
+  assert.equal(cd.querySelector(".sidebar").inert, false);
+  configWindow.close();
+  console.log(
+    "PASS settings categories, server values, write-only credentials and return navigation",
   );
   let calls = [];
   const w = await setup((options) => {

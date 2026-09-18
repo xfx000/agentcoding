@@ -60,12 +60,15 @@ applyPreferences();
 function closeSettings() {
   $("#settings-page").hidden = true;
   $(".workspace").inert = false;
+  $(".sidebar").inert = false;
+  $("#model-key").value = "";
   $("#open-settings").setAttribute("aria-expanded", "false");
   $("#open-settings").focus();
 }
 $("#open-settings").addEventListener("click", () => {
   $("#settings-page").hidden = false;
   $(".workspace").inert = true;
+  $(".sidebar").inert = true;
   $("#open-settings").setAttribute("aria-expanded", "true");
   $("#close-settings").focus();
 });
@@ -86,6 +89,143 @@ $("#typing-enabled").addEventListener("change", (event) => {
 $("#typing-speed").addEventListener("change", (event) => {
   preferences.speed = event.target.value;
   applyPreferences(true);
+});
+
+let settingsLoaded = false;
+let settingsLoading = false;
+const settingsLabels = {
+  appearance: ["外观", "让工作台更合你的习惯。"],
+  model: ["AI 模型与 Key", "管理模型服务与连接凭据。"],
+  database: ["数据库", "了解数据来源，设置查询边界。"],
+};
+function settingsMessage(text) {
+  $("#model-load-status").textContent = text;
+  $("#database-load-status").textContent = text;
+}
+function fillServerSettings(data) {
+  $("#model-provider").value = data.model.provider;
+  $("#model-base-url").value = data.model.baseUrl;
+  $("#model-name").value = data.model.name;
+  $("#model-key-state").textContent = data.model.keyConfigured
+    ? "已配置 · 不回显"
+    : "未配置";
+  $("#database-kind").textContent = data.database.kind;
+  $("#database-location").textContent = data.database.location;
+  $("#database-max-rows").value = data.database.maxRows;
+  $("#database-timeout").value = data.database.timeoutSeconds;
+  $("#model-fields").disabled = false;
+  $("#database-fields").disabled = false;
+  settingsMessage(
+    data.restartRequired
+      ? "已保存的配置尚未生效，请重启本地服务。"
+      : "本地配置 · 仅当前机器可管理",
+  );
+  updateModelFields();
+}
+function updateModelFields() {
+  $("#model-base-url").required = $("#model-provider").value === "openai";
+}
+$("#model-provider").addEventListener("change", updateModelFields);
+async function loadServerSettings() {
+  if (demoMode) {
+    settingsMessage(
+      "静态演示版不连接模型或数据库，不能填写或保存凭据。请在本地完整版中配置。",
+    );
+    $("#database-kind").textContent = "固定模拟数据";
+    $("#database-location").textContent = "浏览器内演示";
+    return;
+  }
+  if (settingsLoading || settingsLoaded) return;
+  settingsLoading = true;
+  settingsMessage("正在读取本地配置…");
+  try {
+    const result = await request("/api/settings", {
+      headers: { "X-Qiqi-Settings": "1" },
+      cache: "no-store",
+    });
+    if (!result.ok)
+      throw new Error(
+        "设置暂不可用，请通过本机地址访问，并确认服务以 local 配置启动。",
+      );
+    fillServerSettings(await result.json());
+    settingsLoaded = true;
+  } catch (error) {
+    settingsMessage(error.message);
+  } finally {
+    settingsLoading = false;
+  }
+}
+document.querySelectorAll("[data-settings-tab]").forEach((button) =>
+  button.addEventListener("click", () => {
+    const page = button.dataset.settingsTab;
+    document
+      .querySelectorAll("[data-settings-panel]")
+      .forEach(
+        (panel) => (panel.hidden = panel.dataset.settingsPanel !== page),
+      );
+    document.querySelectorAll("[data-settings-tab]").forEach((tab) => {
+      const selected = tab === button;
+      tab.classList.toggle("active", selected);
+      if (selected) tab.setAttribute("aria-current", "page");
+      else tab.removeAttribute("aria-current");
+    });
+    $("#settings-heading").textContent = settingsLabels[page][0];
+    $("#settings-subtitle").textContent = settingsLabels[page][1];
+    $(".settings-main").scrollTop = 0;
+    if (page !== "appearance") loadServerSettings();
+  }),
+);
+async function saveServerSettings(kind, payload) {
+  if (demoMode) return;
+  const form = $("#" + kind + "-settings-form");
+  const button = form.querySelector("button[type=submit]");
+  button.disabled = true;
+  settingsMessage("正在保存…");
+  try {
+    const result = await request("/api/settings/" + kind, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Qiqi-Settings": "1" },
+      body: JSON.stringify(payload),
+    });
+    if (!result.ok) {
+      let detail;
+      try {
+        detail = (await result.json()).error;
+      } catch {}
+      throw new Error(
+        result.status === 400 && detail
+          ? detail
+          : "保存失败，请确认本地服务可用后重试。",
+      );
+    }
+    const data = await result.json();
+    $("#model-key").value = "";
+    if (kind === "model")
+      $("#model-key-state").textContent = data.model.keyConfigured
+        ? "已配置 · 不回显"
+        : "未配置";
+    settingsMessage("已保存。重启本地服务后生效，当前运行中的分析不受影响。");
+  } catch (error) {
+    settingsMessage(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+$("#model-settings-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveServerSettings("model", {
+    provider: $("#model-provider").value,
+    baseUrl: $("#model-base-url").value.trim(),
+    name: $("#model-name").value.trim(),
+    apiKey: $("#model-key").value,
+  });
+});
+$("#database-settings-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveServerSettings("database", {
+    maxRows: Number($("#database-max-rows").value),
+    timeoutSeconds: Number($("#database-timeout").value),
+  });
 });
 
 function element(tag, className, text) {

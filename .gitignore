@@ -7,3 +7,5 @@ target/
 .env
 application-local.yml
 node_modules/
+application-local.properties
+.qiqi-settings-*.tmp
