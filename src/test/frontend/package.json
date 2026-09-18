@@ -1,0 +1,10 @@
+{
+  "name": "qiqi-frontend-checks",
+  "private": true,
+  "scripts": {
+    "test": "node verify.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "29.1.1"
+  }
+}

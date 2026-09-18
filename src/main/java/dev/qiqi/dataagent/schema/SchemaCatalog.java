@@ -38,8 +38,12 @@ public class SchemaCatalog {
         }
         try (var connection = dataSource.getConnection()) {
             DatabaseMetaData metadata = connection.getMetaData();
+            String metadataTable = metadata.storesUpperCaseIdentifiers()
+                    ? table.toUpperCase(Locale.ROOT) : table;
             List<Map<String, Object>> columns = new ArrayList<>();
-            try (var rs = metadata.getColumns(null, null, table.toUpperCase(Locale.ROOT), null)) {
+            String escape = metadata.getSearchStringEscape();
+            String tablePattern = metadataTable.replace("_", escape + "_");
+            try (var rs = metadata.getColumns(connection.getCatalog(), connection.getSchema(), tablePattern, null)) {
                 while (rs.next()) {
                     Map<String, Object> column = new LinkedHashMap<>();
                     column.put("name", rs.getString("COLUMN_NAME").toLowerCase(Locale.ROOT));
@@ -50,7 +54,7 @@ public class SchemaCatalog {
             }
             if (columns.isEmpty()) throw new IllegalStateException("No metadata found for table: " + table);
             List<Map<String, String>> foreignKeys = new ArrayList<>();
-            try (var rs = metadata.getImportedKeys(null, null, table.toUpperCase(Locale.ROOT))) {
+            try (var rs = metadata.getImportedKeys(connection.getCatalog(), connection.getSchema(), metadataTable)) {
                 while (rs.next()) {
                     foreignKeys.add(Map.of(
                             "column", rs.getString("FKCOLUMN_NAME").toLowerCase(Locale.ROOT),

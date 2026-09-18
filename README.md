@@ -14,6 +14,9 @@ Qiqi DataAgent 是一个基于 AgentScope Java 的数据分析智能体。用户
 - JDBC 查询超时、最大行数和只读连接标记。
 - 查询审计：记录 `queryId`、用户、会话、最终 SQL、耗时和执行状态。
 - SSE 流式接口和一个无前端构建依赖的聊天页面。
+- 响应式分析工作台：流式 Markdown 报告、可横向滚动的表格、SQL 复制、报告下载和查询证据。
+- 支持快捷问题、停止生成、新建分析和历史切换；不同对话可同时生成，后台完成后显示新回复提示。
+- 停止按钮仅影响当前对话；删除生成中的对话会停止其请求。请求进行期间暂不切换演示身份。
 - 原创 H2 销售数据，开箱即可验证 SQL、安全策略和部门隔离。
 
 当前身份入口 `X-Qiqi-User` 是本地演示适配器，用来验证 Agent 运行时身份传播，不是生产登录方案。公开部署前必须替换成 SSO、JWT 或企业网关认证，并为业务库配置数据库级只读账号。
@@ -66,6 +69,24 @@ mvn spring-boot:run
 
 没有 API Key 时应用仍可启动，页面、数据和自动化测试可用；聊天接口会返回清楚的配置错误。
 
+### 使用 OpenAI 兼容网关
+
+在项目根目录创建 `application-local.yml`（已被 Git 忽略），填写网关配置：
+
+```yaml
+qiqi:
+  model:
+    provider: openai
+    base-url: https://your-gateway.example/v1
+    api-key: "your-key"
+    name: your-model-id
+```
+
+通过 `mvn spring-boot:run -Dspring-boot.run.profiles=local` 加载该配置。
+也可使用 `QIQI_MODEL_PROVIDER`、`QIQI_MODEL_BASE_URL`、`QIQI_MODEL_API_KEY` 和
+`QIQI_MODEL` 环境变量。默认仍使用 DashScope；兼容网关使用 Bearer 认证，
+模型 ID 以网关的模型列表为准，需支持流式回复和工具调用。不要提交真实密钥。
+
 ## API
 
 流式聊天：
@@ -88,6 +109,20 @@ curl http://localhost:8080/api/meta
 ```bash
 mvn test
 ```
+
+前端回归检查（Node.js 22.13+；仅测试需要，运行应用无需 Node.js）：
+
+```bash
+npm --prefix src/test/frontend ci
+npm --prefix src/test/frontend test
+```
+
+覆盖 Markdown 表格和代码块、HTML 清理、跨分片 UTF-8/SSE、查询证据、身份切换、
+网络错误、连接中断、停止生成和重复提交。Markdown 依赖随项目本地分发，不依赖运行时 CDN。
+对话自动保存在当前浏览器的 localStorage 中，按演示身份分开显示；支持刷新恢复、历史切换和删除。
+记录包含问题、回答、执行过程及查询证据，不跨浏览器同步；升级前未保存的对话无法恢复。
+服务端 Agent 上下文仍使用内存存储，服务重启后历史报告可以查看，但模型不会保留重启前的上下文。
+也可通过「下载报告」保存 Markdown。
 
 测试覆盖以下边界：
 
