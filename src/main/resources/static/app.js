@@ -1,4 +1,6 @@
 "use strict";
+const demoMode = document.documentElement.dataset.demo === "true";
+const request = demoMode ? window.qiqiDemoFetch : window.fetch.bind(window);
 const $ = (selector) => document.querySelector(selector);
 const state = {
   conversationId: crypto.randomUUID(),
@@ -217,7 +219,8 @@ function refreshControls() {
         ? "准备好，开始探索数据"
         : "请先配置模型";
 }
-const historyKey = () => `qiqi.conversations.v1.${user.value}`;
+const historyKey = () =>
+  `${demoMode ? "qiqi.demo.conversations.v1" : "qiqi.conversations.v1"}.${user.value}`;
 function activeChat() {
   return state.chats.find((chat) => chat.id === state.activeId);
 }
@@ -428,7 +431,7 @@ function updateScope() {
     option?.dataset.scope === "ALL" ? "全部数据" : "本部门数据";
 }
 async function loadMeta() {
-  const response = await fetch("/api/meta");
+  const response = await request("/api/meta");
   if (!response.ok) throw new Error("服务暂不可用，请稍后刷新页面");
   const meta = await response.json();
   for (const item of meta.demoUsers) {
@@ -444,7 +447,14 @@ async function loadMeta() {
     window.DOMPurify,
   );
   $(".connection").classList.add("ready");
-  $("#connection-label").textContent = "示例数据库已连接";
+  $("#connection-label").textContent = demoMode
+    ? "演示模式 · 模拟数据"
+    : "示例数据库已连接";
+  if (demoMode) {
+    $("#notice").textContent =
+      "交互演示：回答为预设示例，不执行真实查询；输入仅保存在当前浏览器。";
+    $("#notice").hidden = false;
+  }
   if (!state.configured) {
     $("#notice").textContent =
       !window.marked || !window.DOMPurify
@@ -757,7 +767,7 @@ async function send(query) {
   follow();
   let stopped = false;
   try {
-    const result = await fetch("/api/chat/stream", {
+    const result = await request("/api/chat/stream", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

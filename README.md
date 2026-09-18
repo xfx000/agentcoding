@@ -177,3 +177,13 @@ Agent 自动评分和 BIRD 数据集评测暂不在当前范围；安全与功�
 ## 公开发布
 
 仓库使用 [Apache License 2.0](LICENSE)。提交 GitHub 前请确认历史中没有 API Key、真实数据库地址、公司数据或课程受限资源。项目依赖 [AgentScope Java](https://github.com/agentscope-ai/agentscope-java)、Spring Boot、JSqlParser、H2 等第三方开源组件，各自遵循其许可证。
+
+## GitHub Pages 交互演示
+
+`python scripts/build-demo.py` 生成 `target/pages-demo/`，可用静态服务器预览。
+该目录仅包含前端和固定模拟回答，不复制本地配置、不访问模型或数据库。
+默认白色/雾青绿主题、流式 Markdown、停止生成及本地历史均可体验；演示历史与正式版分开保存。
+
+发布时将生成目录的内容推送到 `gh-pages` 分支，并在仓库 Settings → Pages
+选择 Deploy from a branch → gh-pages → /(root)。更新演示时重新生成并推送该分支。
+构建输出使用相对资源路径，兼容 GitHub Pages 的 `/noman/` 子路径。
