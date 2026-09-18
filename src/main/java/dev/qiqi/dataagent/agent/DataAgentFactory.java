@@ -12,6 +12,8 @@ import io.agentscope.core.state.InMemoryAgentStateStore;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.extensions.model.dashscope.DashScopeChatModel;
 import io.agentscope.extensions.model.dashscope.formatter.DashScopeChatFormatter;
+import io.agentscope.extensions.model.openai.OpenAIChatModel;
+import io.agentscope.extensions.model.openai.formatter.OpenAIChatFormatter;
 import org.springframework.stereotype.Component;
 
 /**
@@ -55,7 +57,15 @@ public class DataAgentFactory {
         this.executeSql = executeSql;
 
         // 没有密钥时不构造模型，让应用和安全测试仍然能够启动；真正聊天时再返回明确错误。
-        this.model = properties.model().apiKey().isBlank() ? null : DashScopeChatModel.builder()
+        this.model = properties.model().apiKey().isBlank() ? null
+                : properties.model().provider().equals("openai") ? OpenAIChatModel.builder()
+                .apiKey(properties.model().apiKey())
+                .baseUrl(properties.model().baseUrl())
+                .modelName(properties.model().name())
+                .stream(true)
+                .formatter(new OpenAIChatFormatter())
+                .build()
+                : DashScopeChatModel.builder()
                 .apiKey(properties.model().apiKey())
                 .modelName(properties.model().name())
                 .stream(true)
@@ -68,7 +78,7 @@ public class DataAgentFactory {
     }
 
     public ReActAgent create(UserIdentity identity) {
-        if (model == null) throw new IllegalStateException("DASHSCOPE_API_KEY is not configured");
+        if (model == null) throw new IllegalStateException("Model API key is not configured (QIQI_MODEL_API_KEY or DASHSCOPE_API_KEY)");
 
         // Toolkit 是 AgentScope 的工具注册表。前两个对象通过 @Tool 反射注册；
         // execute_sql 需要精确控制参数和 RuntimeContext，因此显式实现 AgentTool。

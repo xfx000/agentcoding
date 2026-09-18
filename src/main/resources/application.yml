@@ -15,7 +15,9 @@ server:
 
 qiqi:
   model:
-    api-key: ${DASHSCOPE_API_KEY:}
+    provider: ${QIQI_MODEL_PROVIDER:dashscope}
+    base-url: ${QIQI_MODEL_BASE_URL:}
+    api-key: ${QIQI_MODEL_API_KEY:${DASHSCOPE_API_KEY:}}
     name: ${QIQI_MODEL:qwen-plus}
     max-iterations: 24
   query:

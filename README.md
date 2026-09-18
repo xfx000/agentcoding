@@ -13,6 +13,9 @@ Qiqi DataAgent 是一个基于 AgentScope Java 的数据分析智能体。用户
 - JDBC 查询超时、最大行数和只读连接标记。
 - 查询审计：记录 `queryId`、用户、会话、最终 SQL、耗时和执行状态。
 - SSE 流式接口和一个无前端构建依赖的聊天页面。
+- 响应式分析工作台：流式 Markdown 报告、可横向滚动的表格、SQL 复制、报告下载和查询证据。
+- 支持快捷问题、停止生成、新建分析和历史切换；不同对话可同时生成，后台完成后显示新回复提示。
+- 停止按钮仅影响当前对话；删除生成中的对话会停止其请求。请求进行期间暂不切换演示身份。
 - 原创 H2 销售数据，开箱即可验证 SQL、安全策略和部门隔离。
 
 当前身份入口 `X-Qiqi-User` 是本地演示适配器，用来验证 Agent 运行时身份传播，不是生产登录方案。公开部署前必须替换成 SSO、JWT 或企业网关认证，并为业务库配置数据库级只读账号。
@@ -65,6 +68,24 @@ mvn spring-boot:run
 
 没有 API Key 时应用仍可启动，页面、数据和自动化测试可用；聊天接口会返回清楚的配置错误。
 
+### 使用 OpenAI 兼容网关
+
+在项目根目录创建 `application-local.yml`（已被 Git 忽略），填写网关配置：
+
+```yaml
+qiqi:
+  model:
+    provider: openai
+    base-url: https://your-gateway.example/v1
+    api-key: "your-key"
+    name: your-model-id
+```
+
+通过 `mvn spring-boot:run -Dspring-boot.run.profiles=local` 加载该配置。
+也可使用 `QIQI_MODEL_PROVIDER`、`QIQI_MODEL_BASE_URL`、`QIQI_MODEL_API_KEY` 和
+`QIQI_MODEL` 环境变量。默认仍使用 DashScope；兼容网关使用 Bearer 认证，
+模型 ID 以网关的模型列表为准，需支持流式回复和工具调用。不要提交真实密钥。
+
 ## API
 
 流式聊天：
@@ -87,6 +108,20 @@ curl http://localhost:8080/api/meta
 ```bash
 mvn test
 ```
+
+前端回归检查（Node.js 22.13+；仅测试需要，运行应用无需 Node.js）：
+
+```bash
+npm --prefix src/test/frontend ci
+npm --prefix src/test/frontend test
+```
+
+覆盖 Markdown 表格和代码块、HTML 清理、跨分片 UTF-8/SSE、查询证据、身份切换、
+网络错误、连接中断、停止生成和重复提交。Markdown 依赖随项目本地分发，不依赖运行时 CDN。
+对话自动保存在当前浏览器的 localStorage 中，按演示身份分开显示；支持刷新恢复、历史切换和删除。
+记录包含问题、回答、执行过程及查询证据，不跨浏览器同步；升级前未保存的对话无法恢复。
+服务端 Agent 上下文仍使用内存存储，服务重启后历史报告可以查看，但模型不会保留重启前的上下文。
+也可通过「下载报告」保存 Markdown。
 
 测试覆盖以下边界：
 
@@ -141,3 +176,26 @@ Agent 自动评分和 BIRD 数据集评测暂不在当前范围；安全与功�
 ## 公开发布
 
 仓库使用 [Apache License 2.0](LICENSE)。提交 GitHub 前请确认历史中没有 API Key、真实数据库地址、公司数据或课程受限资源。项目依赖 [AgentScope Java](https://github.com/agentscope-ai/agentscope-java)、Spring Boot、JSqlParser、H2 等第三方开源组件，各自遵循其许可证。
+
+## GitHub Pages 交互演示
+
+`python scripts/build-demo.py` 生成 `target/pages-demo/`，可用静态服务器预览。
+该目录仅包含前端和固定模拟回答，不复制本地配置、不访问模型或数据库。
+默认白色/雾青绿主题、流式 Markdown、停止生成及本地历史均可体验；演示历史与正式版分开保存。
+
+发布时将生成目录的内容推送到 `gh-pages` 分支，并在仓库 Settings → Pages
+选择 Deploy from a branch → gh-pages → /(root)。更新演示时重新生成并推送该分支。
+构建输出使用相对资源路径，兼容 GitHub Pages 的 `/noman/` 子路径。
+
+### 本机设置页
+
+设置采用独立分类导航：外观、AI 模型与 Key、数据库。
+外观与打字效果立即生效，保存在浏览器；模型连接和查询限制写入项目根目录
+`application-local.properties`，使用 `local` profile 重启服务后生效。
+该文件已被 Git 忽略，权限为仅文件所有者可读写。配置优先于同目录的
+`application-local.yml`；Key 留空保留原值，接口不返回 Key。
+管理接口仅在 `local` profile 启用，要求本机请求和同源访问。
+
+数据库页展示当前连接，并允许调整最大返回行数（1–1000）和查询超时（1–60 秒）。
+本次不提供更换数据库连接：外部数据库需要先分离系统身份/审计库与业务库，并适配权限。
+静态演示版的模型与数据库表单禁用，不收集凭据。

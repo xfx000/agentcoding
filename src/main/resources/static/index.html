@@ -1,35 +1,354 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Qiqi DataAgent</title>
-  <link rel="stylesheet" href="/styles.css">
-</head>
-<body>
-  <main class="shell">
-    <header>
-      <div>
-        <p class="eyebrow">EVIDENCE-FIRST DATA AGENT</p>
-        <h1>Qiqi DataAgent</h1>
-        <p class="sub">用自然语言查询数据，并保留可核验的 SQL 证据。</p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Qiqi DataAgent · 数据分析工作台</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script defer src="/vendor/marked.umd.js"></script>
+    <script defer src="/vendor/purify.min.js"></script>
+    <script defer src="/app.js"></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Qiqi DataAgent 首页"
+        ><span class="brand-mark">Q</span
+        ><span>Qiqi<span class="brand-caption">DATA AGENT</span></span></a
+      >
+      <button id="new-chat" class="new-chat">
+        <span aria-hidden="true">＋</span> 新建分析
+      </button>
+      <div class="nav-label">最近对话 <span id="history-count">0</span></div>
+      <nav id="history" class="history-list" aria-label="历史对话"></nav>
+      <button
+        id="open-settings"
+        class="settings-button"
+        aria-controls="settings-page"
+      >
+        <span aria-hidden="true">⚙</span> 设置
+      </button>
+      <div class="connection">
+        <span class="connection-dot"></span
+        ><span id="connection-label">正在连接服务</span>
       </div>
-      <label>演示身份
-        <select id="user"></select>
-      </label>
-    </header>
+    </aside>
 
-    <section id="notice" class="notice"></section>
-    <section id="messages" class="messages" aria-live="polite"></section>
-
-    <form id="composer">
-      <textarea id="query" rows="3" placeholder="例如：对比 2026 年 1 月和 2 月已付款收入，并按部门解释变化" required></textarea>
-      <div class="actions">
-        <span id="status">就绪</span>
-        <button type="submit">开始分析</button>
+    <main class="workspace">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <strong id="conversation-title">新建分析</strong>
+        </div>
+        <div class="identity">
+          <span class="avatar" aria-hidden="true">U</span
+          ><label for="user" class="sr-only">演示身份</label
+          ><select id="user" disabled aria-label="演示身份"></select
+          ><span id="scope" class="scope">加载中</span>
+        </div>
+      </header>
+      <div id="scroll-area" class="scroll-area">
+        <div class="content">
+          <section id="notice" class="notice" role="alert" hidden></section>
+          <section id="welcome" class="welcome">
+            <div class="welcome-badge">
+              <span class="spark" aria-hidden="true">✦</span> 你的数据分析伙伴
+            </div>
+            <h1>让数据，回答你的问题<span>。</span></h1>
+            <p class="intro">
+              用自然语言探索业务数据。让 Qiqi
+              帮你查询、对比，发现变化背后的线索。
+            </p>
+            <div class="capabilities">
+              <span>✓ 真实数据查询</span><span>✓ 按权限访问</span
+              ><span>✓ SQL 证据可追溯</span>
+            </div>
+            <div class="suggestion-heading">
+              <span>从一个问题开始</span
+              ><span class="small-label">TRY ASKING</span>
+            </div>
+            <div class="suggestions">
+              <button
+                class="suggestion"
+                data-prompt="请对比 2026 年 1 月和 2 月的已付款订单收入，计算增长金额和增长率，并按部门拆分。先确认订单状态的实际取值，最后附上 SQL 和 queryId。"
+              >
+                <span class="suggestion-icon">↗</span
+                ><strong>收入趋势分析</strong
+                ><span>对比 1 月与 2 月，发现收入的变化</span
+                ><span class="suggestion-arrow">↗</span>
+              </button>
+              <button
+                class="suggestion"
+                data-prompt="请分析各商品品类的已付款销售额和销量，按销售额排序。先确认实际订单状态取值，并提供 SQL 和 queryId。"
+              >
+                <span class="suggestion-icon">▥</span
+                ><strong>找到畅销品类</strong
+                ><span>哪些品类贡献了更多销售额？</span
+                ><span class="suggestion-arrow">↗</span>
+              </button>
+              <button
+                class="suggestion"
+                data-prompt="请介绍当前可查询的数据表、关键字段和表之间的关联关系，不要猜测不存在的字段。"
+              >
+                <span class="suggestion-icon">▦</span
+                ><strong>探索业务数据</strong
+                ><span>了解可查询的数据与表结构</span
+                ><span class="suggestion-arrow">↗</span>
+              </button>
+            </div>
+            <div class="dataset-note">
+              <span class="database-symbol" aria-hidden="true">▱</span
+              ><span>当前连接 <strong>销售示例数据库</strong></span
+              ><span class="dataset-separator">·</span><span>5 张业务表</span>
+            </div>
+          </section>
+          <section
+            id="messages"
+            class="messages"
+            aria-label="分析对话"
+          ></section>
+        </div>
       </div>
-    </form>
-  </main>
-  <script src="/app.js"></script>
-</body>
+      <div class="composer-dock">
+        <button id="jump-latest" class="jump-latest" hidden>
+          ↓ 回到最新内容
+        </button>
+        <form id="composer" class="composer">
+          <label for="query" class="sr-only">输入数据分析问题</label>
+          <textarea
+            id="query"
+            rows="2"
+            placeholder="有什么想了解的数据？输入你的问题…"
+            maxlength="8000"
+            required
+          ></textarea>
+          <div class="composer-bottom">
+            <span id="status" role="status" aria-live="polite">正在连接…</span>
+            <div class="composer-controls">
+              <span class="keyboard-hint">Enter 发送 · Shift + Enter 换行</span
+              ><button id="stop" class="stop-button" type="button" hidden>
+                ■ 停止生成</button
+              ><button id="send" class="send-button" type="submit" disabled>
+                <span>开始分析</span><span aria-hidden="true">↑</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </main>
+    <section
+      id="settings-page"
+      class="settings-page"
+      aria-labelledby="settings-heading"
+      hidden
+    >
+      <aside class="settings-nav">
+        <button id="close-settings" class="settings-return">
+          <span aria-hidden="true">←</span> 返回应用
+        </button>
+        <div class="settings-nav-title">设置</div>
+        <nav aria-label="设置分类">
+          <button
+            class="settings-tab active"
+            data-settings-tab="appearance"
+            aria-current="page"
+          >
+            <span aria-hidden="true">◐</span> 外观
+          </button>
+          <button class="settings-tab" data-settings-tab="model">
+            <span aria-hidden="true">✧</span> AI 模型与 Key
+          </button>
+          <button class="settings-tab" data-settings-tab="database">
+            <span aria-hidden="true">▤</span> 数据库
+          </button>
+        </nav>
+        <p class="settings-nav-caption">Qiqi · 你的数据工作台</p>
+      </aside>
+      <div class="settings-main">
+        <header class="settings-header">
+          <h1 id="settings-heading" tabindex="-1">外观</h1>
+          <p id="settings-subtitle">让工作台更合你的习惯。</p>
+        </header>
+        <div class="settings-content">
+          <div data-settings-panel="appearance">
+            <section class="settings-card">
+              <h2>外观</h2>
+              <p>为你的工作台选择一种色彩。</p>
+              <fieldset class="theme-options">
+                <legend class="sr-only">界面主题</legend>
+                <label class="theme-option"
+                  ><input
+                    type="radio"
+                    name="theme"
+                    value="white"
+                    checked
+                  /><span class="theme-preview preview-white"
+                    ><i></i><b></b><em></em></span
+                  ><strong>纯净白</strong
+                  ><span>留白与石墨，专注内容</span></label
+                >
+                <label class="theme-option"
+                  ><input type="radio" name="theme" value="sage" /><span
+                    class="theme-preview preview-sage"
+                    ><i></i><b></b><em></em></span
+                  ><strong>雾青绿</strong
+                  ><span>柔和青绿，清爽而安静</span></label
+                >
+              </fieldset>
+            </section>
+            <section class="settings-card">
+              <h2>输出体验</h2>
+              <div class="settings-row">
+                <div>
+                  <label for="typing-enabled">打字机效果</label>
+                  <p>让回答逐字展开，保持流畅的阅读节奏。</p>
+                </div>
+                <input
+                  id="typing-enabled"
+                  class="settings-switch"
+                  type="checkbox"
+                  role="switch"
+                  checked
+                />
+              </div>
+              <div class="settings-row">
+                <label for="typing-speed">呈现速度</label
+                ><select id="typing-speed">
+                  <option value="relaxed">舒缓</option>
+                  <option value="natural" selected>自然</option>
+                  <option value="fast">快速</option>
+                </select>
+              </div>
+            </section>
+            <p class="settings-footnote" id="settings-feedback" role="status">
+              设置自动保存在当前浏览器
+            </p>
+          </div>
+          <div data-settings-panel="model" hidden>
+            <div
+              class="settings-status"
+              id="model-load-status"
+              role="status"
+            ></div>
+            <form id="model-settings-form" class="settings-card config-form">
+              <h2>模型连接</h2>
+              <p>支持 DashScope 和 OpenAI 兼容接口。</p>
+              <fieldset id="model-fields" disabled>
+                <label for="model-provider">接口类型</label
+                ><select id="model-provider">
+                  <option value="openai">OpenAI 兼容</option>
+                  <option value="dashscope">DashScope</option>
+                </select>
+                <label for="model-base-url">API 地址</label
+                ><input
+                  id="model-base-url"
+                  type="url"
+                  placeholder="https://your-gateway.example/v1"
+                  maxlength="2048"
+                  autocomplete="off"
+                /><small
+                  >OpenAI 兼容接口必填；使用你获授权的模型服务地址。</small
+                >
+                <label for="model-name">模型名称</label
+                ><input
+                  id="model-name"
+                  required
+                  maxlength="160"
+                  placeholder="输入服务商提供的模型 ID"
+                  autocomplete="off"
+                />
+                <label for="model-key"
+                  >API Key
+                  <span id="model-key-state" class="setting-badge"
+                    >未配置</span
+                  ></label
+                ><input
+                  id="model-key"
+                  type="password"
+                  maxlength="4096"
+                  placeholder="留空保留已配置的 Key"
+                  autocomplete="new-password"
+                  spellcheck="false"
+                /><small>只写入服务端本地配置，不回显、不存入浏览器。</small>
+                <div class="config-footer">
+                  <span>保存后重启本地服务生效</span
+                  ><button type="submit" class="settings-save">
+                    保存模型配置
+                  </button>
+                </div>
+              </fieldset>
+            </form>
+          </div>
+          <div data-settings-panel="database" hidden>
+            <div
+              class="settings-status"
+              id="database-load-status"
+              role="status"
+            ></div>
+            <section class="settings-card">
+              <h2>当前数据源</h2>
+              <div class="settings-row">
+                <span>数据库</span><strong id="database-kind">读取中…</strong>
+              </div>
+              <div class="settings-row">
+                <span>连接位置</span><span id="database-location">—</span>
+              </div>
+              <p class="database-note">
+                默认使用本机 H2
+                内存库，重启后重新初始化示例数据。此页不会更换数据库连接。
+              </p>
+            </section>
+            <form id="database-settings-form" class="settings-card config-form">
+              <h2>查询限制</h2>
+              <p>限制单次查询规模，避免分析占用过多资源。</p>
+              <fieldset id="database-fields" disabled>
+                <label for="database-max-rows">最多返回行数</label
+                ><input
+                  id="database-max-rows"
+                  type="number"
+                  min="1"
+                  max="1000"
+                  required
+                /><label for="database-timeout">查询超时（秒）</label
+                ><input
+                  id="database-timeout"
+                  type="number"
+                  min="1"
+                  max="60"
+                  required
+                />
+                <div class="config-footer">
+                  <span>保存后重启本地服务生效</span
+                  ><button type="submit" class="settings-save">
+                    保存查询配置
+                  </button>
+                </div>
+              </fieldset>
+            </form>
+            <section class="settings-card database-roadmap">
+              <h2>外部数据库 <span class="setting-badge">待扩展</span></h2>
+              <p>
+                MySQL、PostgreSQL
+                等接入需分离业务库与系统库，并适配数据权限规则，当前暂不开放连接配置。
+              </p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+    <dialog
+      id="delete-dialog"
+      class="delete-dialog"
+      aria-labelledby="delete-heading"
+      aria-describedby="delete-description"
+    >
+      <div class="delete-symbol" aria-hidden="true">−</div>
+      <h2 id="delete-heading">删除这条对话？</h2>
+      <p id="delete-title" class="delete-title"></p>
+      <p id="delete-description"></p>
+      <div class="dialog-actions">
+        <button id="cancel-delete" autofocus>保留对话</button
+        ><button id="confirm-delete">删除对话</button>
+      </div>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
 </html>
