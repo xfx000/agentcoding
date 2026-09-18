@@ -106,7 +106,7 @@ mvn test
 | --- | --- | --- |
 | `DASHSCOPE_API_KEY` | 空 | DashScope 模型密钥 |
 | `QIQI_MODEL` | `qwen-plus` | 模型名 |
-| `qiqi.model.max-iterations` | `12` | 单次 ReAct 最大迭代 |
+| `qiqi.model.max-iterations` | `24` | 单次 ReAct 最大迭代 |
 | `qiqi.query.max-rows` | `200` | 查询结果硬上限 |
 | `qiqi.query.timeout` | `10s` | JDBC 查询超时 |
 | `qiqi.exposed-tables` | 五张示例业务表 | Agent 可见表白名单 |

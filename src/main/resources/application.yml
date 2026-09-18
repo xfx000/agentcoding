@@ -17,7 +17,7 @@ qiqi:
   model:
     api-key: ${DASHSCOPE_API_KEY:}
     name: ${QIQI_MODEL:qwen-plus}
-    max-iterations: 12
+    max-iterations: 24
   query:
     max-rows: 200
     timeout: 10s
